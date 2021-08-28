@@ -1,8 +1,10 @@
 import numpy as np    
+import sys
 import math
+import random
 
 """
-3d array utility functions    
+3d array utility functions   
 """
 def x(vec3):
     return vec3[0]
@@ -24,14 +26,35 @@ def normalize(v):
     if norm == 0: 
        return v
     return v / norm
+
+"""
+misc utility functions
+"""
+def clamp(x, minval, maxval):
+    if (x < minval):
+        return minval
+    if (x > maxval):
+        return maxval
+    return x
+
 """
 function to write a single pixel's color to the standard
-output stream.
+output stream (after taking multiple samples)
 """
-def write_color(pixel_color):
-    ix = int(255.999 * x(pixel_color))
-    iy = int(255.999 * y(pixel_color))
-    iz = int(255.999 * z(pixel_color))
+def write_color(pixel_color, samples_per_pixel):
+    r = x(pixel_color)
+    g = y(pixel_color)
+    b = z(pixel_color)
+
+    #normalize by number of samples per pixel
+    scale = 1.0 / (samples_per_pixel)
+    r *= scale
+    g *= scale
+    b *= scale
+
+    ix = int(256 * clamp(r, 0.0, 0.999))
+    iy = int(256 * clamp(g, 0.0, 0.999))
+    iz = int(256 * clamp(b, 0.0, 0.999))
     print("{} {} {}\n".format(ix,iy,iz))
 
 """
@@ -87,6 +110,28 @@ class hittable:
         self.t_max = t_max
         self.rec = rec
         self.is_hit = False
+
+"""
+camera class
+"""
+class camera:
+        
+    def __init__(self):
+        #camera
+        self.aspect_ratio = 16 / 9
+        self.viewport_height = 2.0
+        self.viewport_width = self.aspect_ratio * self.viewport_height
+        self.focal_length = 1.0
+        
+        self.origin = np.array([0,0,0])
+        self.horizontal = np.array([self.viewport_width,0.0,0.0])
+        self.vertical = np.array([0.0,self.viewport_height,0.0])
+        self.lower_left_corner = self.origin - self.horizontal/2 - self.vertical/2 - np.array([0,0,self.focal_length])
+    
+    def get_ray(self,u,v):
+        return ray(self.origin, self.lower_left_corner + u*self.horizontal + v*self.vertical - self.origin)
+
+
 """
 class to store a list of 
 hittable objects in the scene
@@ -169,7 +214,8 @@ def rt_main():
     aspect_ratio = 16 / 9
     image_width = 400
     image_height = int(image_width / aspect_ratio)
-
+    samples_per_pixel = 10
+    
     #world
     world = hittable_list()
     sp1 = sphere(np.array([0,0,-1]),0.5)
@@ -177,26 +223,21 @@ def rt_main():
     sp2 = sphere(np.array([0,-100.5,-1]),100)
     world.add(sp2)
 
-    #camera
-    viewport_height = 2.0
-    viewport_width = aspect_ratio * viewport_height
-    focal_length = 1.0
-    
-    origin = np.array([0,0,0])
-    horizontal = np.array([viewport_width,0,0])
-    vertical = np.array([0,viewport_height,0])
-    lower_left_corner = origin - horizontal/2 - vertical/2 - np.array([0,0,focal_length])
+    #camera object
+    cam = camera()
 
     #render
     print("P3\n{} {}\n255\n".format(image_width,image_height))
 
     for i in reversed(range(image_height)):
         for j in range(image_width):
-            u = j / (image_width-1)
-            v = i / (image_height-1)
-            r = ray(origin,lower_left_corner + u*horizontal + v*vertical - origin)
-            pixel_color = ray_color(r, world)
-            write_color(pixel_color)
+            pixel_color = np.array([0.0,0.0,0.0])
+            for s in range(samples_per_pixel):
+                u = (j+random.uniform(0,1)) / (image_width-1)
+                v = (i+random.uniform(0,1)) / (image_height-1)
+                r = cam.get_ray(u,v)
+                pixel_color = ray_color(r, world) + pixel_color
+            write_color(pixel_color,samples_per_pixel)
 
 if __name__=="__main__":
     rt_main()
