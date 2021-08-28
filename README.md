@@ -7,7 +7,7 @@ But because I have never programmed in Rust before, I am going to port the raytr
 TODO: Python Raytracer
 
 - [x] Basic raytracer
-- [ ] Anti-aliasing
+- [x] Anti-aliasing
 - [ ] Diffuse materials
 - [ ] Lambertian Reflection
 - [ ] Metal
