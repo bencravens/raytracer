@@ -8,7 +8,7 @@ TODO: Python Raytracer
 
 - [x] Basic raytracer
 - [x] Anti-aliasing
-- [ ] Diffuse materials
+- [x] Diffuse materials
 - [ ] Lambertian Reflection
 - [ ] Metal
 - [ ] Dielectrics
