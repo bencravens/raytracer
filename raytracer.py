@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np    
 import sys
 import math
@@ -37,6 +38,15 @@ def clamp(x, minval, maxval):
         return maxval
     return x
 
+def random_in_unit_sphere():
+    #perform rejection sampling to generate a random point in unit sphere
+    while True:
+        p = np.array([random.uniform(-1,1),
+                      random.uniform(-1,1),
+                      random.uniform(-1,1)])
+        if (length_squared(p) < 1):
+            return p
+
 """
 function to write a single pixel's color to the standard
 output stream (after taking multiple samples)
@@ -48,9 +58,9 @@ def write_color(pixel_color, samples_per_pixel):
 
     #normalize by number of samples per pixel
     scale = 1.0 / (samples_per_pixel)
-    r *= scale
-    g *= scale
-    b *= scale
+    r = np.sqrt(scale*r)
+    g = np.sqrt(scale*g)
+    b = np.sqrt(scale*b)
 
     ix = int(256 * clamp(r, 0.0, 0.999))
     iy = int(256 * clamp(g, 0.0, 0.999))
@@ -93,7 +103,7 @@ class hit_record:
         if (np.dot(r.b, outward_normal) > 0):
             #ray is inside the sphere
             self.normal = -outward_normal
-            self.front_face = false
+            self.front_face = False
         else:
             #ray outside the sphere
             self.normal = outward_normal
@@ -196,11 +206,18 @@ generate a background color for the scene
 based on a big sphere and then a gradient
 for a blue sky
 """
-def ray_color(r, world):
-    myrec = hit_record()
-    is_hit = world.list_is_hit(r,0,np.inf,myrec)
+def ray_color(r, world, depth):
+
+    #recursion depth limit
+    if (depth <= 0):
+        return np.array([0,0,0])
+
+
+    rec = hit_record()
+    is_hit = world.list_is_hit(r,0,np.inf,rec)
     if (is_hit):
-        return 0.5 * (myrec.normal + np.array([1,1,1]))
+        target = rec.p + rec.normal + random_in_unit_sphere()
+        return 0.5 * ray_color(ray(rec.p, target - rec.p), world, depth-1)
     unit_direction = normalize(r.b)
     t = 0.5*(y(unit_direction) + 1.0)
     result = (1.0-t)*np.array([1.0,1.0,1.0]) + t*np.array([0.5,0.7,1.0])
@@ -214,7 +231,8 @@ def rt_main():
     aspect_ratio = 16 / 9
     image_width = 400
     image_height = int(image_width / aspect_ratio)
-    samples_per_pixel = 10
+    samples_per_pixel = 50
+    max_depth = 50
     
     #world
     world = hittable_list()
@@ -230,13 +248,14 @@ def rt_main():
     print("P3\n{} {}\n255\n".format(image_width,image_height))
 
     for i in reversed(range(image_height)):
+        print("{} left".format(i), file=sys.stderr)
         for j in range(image_width):
             pixel_color = np.array([0.0,0.0,0.0])
             for s in range(samples_per_pixel):
                 u = (j+random.uniform(0,1)) / (image_width-1)
                 v = (i+random.uniform(0,1)) / (image_height-1)
                 r = cam.get_ray(u,v)
-                pixel_color = ray_color(r, world) + pixel_color
+                pixel_color = ray_color(r, world, max_depth) + pixel_color
             write_color(pixel_color,samples_per_pixel)
 
 if __name__=="__main__":
